@@ -1,0 +1,352 @@
+---
+title: "ANLY512_HW6"
+author: "Hongyang Zheng"
+date: "2019/3/25"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(ISLR)
+library(glmnet)
+library(MASS)
+library(biglars)
+```
+
+# Problem 2ab
+#### a)
+i. False, the lasso is more inflexible.
+
+ii. False, the lasso is more inflexible.
+
+iii. True, less flexible model will have less variance, more bias. Since the decrease in variance is bigger than the increase in bias, the prediction accuracy is improved.
+
+iv. False, less flexible model will decrease in variance
+
+#### b)
+i. False, the ridge is more inflexible.
+
+ii. False, the ridge is more inflexible.
+
+iii. True, less flexible model will have less variance, more bias. Since the decrease in variance is bigger than the increase in bias, the prediction accuracy is improved.
+
+iv. False, less flexible model will decrease in variance
+
+
+# Problem 4abc
+#### a)
+As we increase $\lambda$, the model will become less flexible and all $\beta$ decrease from their least square estimate values to 0. Therefore, the model will have more bias, and the training RSS will increase steadily. The correct answer is iii.
+
+#### b)
+When $\lambda=0$, all $\beta$ have their least square estimate values. In this case, the model tries to fit hard to training data and hence test RSS is high. As we increase $\lambda$, $\beta$ start reducing to zero and some of the overfitting is reduced. Thus, test RSS initially decreases. Eventually, as $\beta$ approach 0, the model becomes too simple and test RSS increases, so test RSS decreases initially, and then eventually starts increasing in a U shape. The correct answer is ii.
+
+#### c)
+As we increase $\lambda$, the model will become less flexible and all $\beta$ decrease from their least square estimate values to 0. Therefore, the model will become more simple and contain less variance. So the variance will decrease steadily. The correct answer is iv.
+
+
+# Problem 9abcd
+#### a)
+```{r}
+set.seed(1234)
+# Number of observations
+n=dim(College)[1]
+
+# Split the data set: train 80%, test 20%
+train = sample(1:n, n*0.8)
+College.train = College[train, ]
+College.test = College[-train, ]
+```
+
+#### b)
+```{r}
+# Linear model
+model.1=lm(Apps~., data=College.train)
+
+# Predict
+model.pred.1 = predict(model.1, College.test)
+
+# test RSS
+mean((College.test$Apps - model.pred.1)^2)
+```
+Test error obtained is 904977.9.
+
+#### c)
+```{r}
+# Model matrix
+train.mat = model.matrix(Apps~., data=College.train)
+test.mat = model.matrix(Apps~., data=College.test)
+
+# Using cross validation to select lambda: ridge
+grid = 10 ^ seq(4, -2, length=100)
+mod.ridge = cv.glmnet(train.mat, College.train$Apps, alpha=0, lambda=grid)
+lambda.best = mod.ridge$lambda.min
+lambda.best
+
+# Use the best lambda to build model and calculate test RSS
+ridge.pred = predict(mod.ridge, newx=test.mat, s=lambda.best)
+mean((College.test$Apps - ridge.pred)^2)
+```
+The test error obtained with $\lambda=0.01$ is slightly lower than the one in b)
+
+#### d)
+```{r}
+# Using cross validation to select lambda: lasso
+grid = 10 ^ seq(4, -2, length=100)
+mod.lasso = cv.glmnet(train.mat, College.train$Apps, alpha=1, lambda=grid)
+lambda.best = mod.lasso$lambda.min
+lambda.best
+
+# Use the best lambda to build model and calculate test RSS
+lasso.pred = predict(mod.lasso, newx=test.mat, s=lambda.best)
+mean((College.test$Apps -lasso.pred)^2)
+
+# Coefficient
+predict(mod.lasso, s=lambda.best, type="coefficients")
+```
+The test error obtained with lasso is lower than the test errors in both a) and b). There are 17 non-zero coefficients.
+
+
+# Problem Xtra #49
+#### a)
+```{r}
+set.seed(1234)
+# Build lasso model
+X.model <- model.matrix(lm(medv ~ ., data = Boston))
+fit.lasso = glmnet(X.model, Boston$medv, alpha = 1)
+
+# Plot trajectories of coefficients
+plot(fit.lasso, xvar = "lambda", lwd = 3) 
+grid(col = 3)
+
+# The last five variables
+max(which(fit.lasso$df == 5))
+as.matrix(fit.lasso$beta[,25])
+```
+The last five variables remained in the model are chas, rm, ptratio, black and lstat.
+
+#### b)
+```{r}
+# 10-fold cross validation
+cv.lasso = cv.glmnet(X.model,Boston$medv,alpha = 1, nfolds=10)
+
+# Choose the 1-SE lambda:
+cv.lasso$lambda.1se
+lambda.1se=cv.lasso$lambda.1se
+
+# Build and predict model
+lasso.1se = glmnet(X.model, Boston$medv, alpha =1, lambda = lambda.1se)
+lasso.pred=predict(lasso.1se, newx=X.model)
+
+# Calculate RSE
+n = dim(X.model)[1]
+p = lasso.1se$df
+sqrt(mean((lasso.pred-Boston$medv)^2)*n/(n-p-1))
+```
+The 1SE value of is 0.4564174. The cross validation estimate for the residual standard error is 5.114997.
+
+#### c)
+```{r}
+# Rescale all predictors
+scaled.boston <- scale(Boston)
+apply(scaled.boston, 2, mean)
+apply(scaled.boston, 2, sd)
+scaled.boston <- as.data.frame(scaled.boston)
+
+# Build lasso model
+X.model.2 <- model.matrix(lm(Boston$medv ~ ., data = scaled.boston))
+fit.lasso.2 = glmnet(X.model.2, Boston$medv, alpha = 1)
+
+# Plot trajectories of coefficients
+plot(fit.lasso.2, xvar = "lambda", lwd = 3) 
+grid(col = 3)
+
+# The last five variables
+max(which(fit.lasso.2$df == 5))
+as.matrix(fit.lasso.2$beta[,25])
+```
+The last five variables remained in the model are chas, rm, ptratio, black and lstat. This answer is same as the answer in part a).
+
+#### d)
+```{r}
+# 10-fold cross validation
+cv.lasso.2 = cv.glmnet(X.model.2, Boston$medv, alpha = 1, nfolds=10)
+
+# Choose the 1-SE lambda:
+cv.lasso.2$lambda.1se
+lambda.1se.2=cv.lasso.2$lambda.1se
+
+# Build and predict model
+lasso.1se.2 = glmnet(X.model.2, Boston$medv, alpha =1, lambda = lambda.1se.2)
+lasso.pred.2=predict(lasso.1se.2, newx=X.model.2)
+
+# Calculate RSE
+n = dim(X.model.2)[1]
+p = lasso.1se.2$df
+sqrt(mean((lasso.pred.2-Boston$medv)^2)*n/(n-p-1))
+```
+The cross validation estimate for the residual standard error is 5.114997, which is same as the RSE in part b). Rescaling does not lead to a better performing model.
+
+
+# Problem Xtra #50
+```{r}
+# Load data
+data(diabetes)
+
+# Create the dataframe from x2 and y
+Dia <- as.data.frame.matrix(diabetes$x2)
+Dia$y <- diabetes$y
+```
+
+#### a)
+```{r}
+set.seed(1234)
+
+# Ridge model using 10-fold cross validation
+X2.model = model.matrix(lm(y ~ ., data = Dia))
+cv.ridge = cv.glmnet(X2.model, Dia$y, alpha = 0, nfolds = 10)
+
+# Plot the mean sqared error estimates
+plot(cv.ridge)
+
+# Lambda 1SE
+lambda.1se=cv.ridge$lambda.1se
+lambda.1se
+```
+The Lambda 1SE is `r lambda.1se`.
+
+#### b)
+```{r}
+# Predict with the 1se lambda 
+fit.ridge.1se = glmnet(X2.model, Dia$y, alpha = 0, lambda = lambda.1se)
+predict.ridge.1se = predict(fit.ridge.1se, newx = X2.model)
+
+# RMS prediction error
+sqrt(mean((predict.ridge.1se-Dia$y)^2))
+```
+The RMS prediction error according to cross validation for this $\lambda_{1se}$ is 54.42877.
+
+
+# Problem Xtra #52
+```{r}
+set.seed(123)
+# Load data
+mnist=load('~/Desktop/other/data/mnist_all.RData')
+```
+
+```{r}
+# Generate dataframe
+# Extract data for digit1 and digit8
+y.nist = train$y
+index <- (y.nist == 1 | y.nist == 8)
+x.nist <- train$x[index,]
+x.train <- as.data.frame(x.nist)
+
+y.nist1 = test$y
+index1 <- (y.nist1 == 1 | y.nist1 == 8)
+x.nist1 <- test$x[index1,]
+x.test <- as.data.frame(x.nist1)
+
+# y=1 if it is digit8, y=0 if it is digit1
+x.train$y <- 0
+x.train$y[y.nist[index] == 8] <- 1
+x.test$y <- 0
+x.test$y[y.nist1[index1] == 8] <- 1
+```
+
+```{r}
+# Calculate variance for each pixel for train data
+variance.train=rep(0,784)
+for (i in 1:784)
+{
+  variance.train[i]=var(x.train[,i])
+}
+variance.train=as.data.frame(variance.train)
+train=x.train[,variance.train != 0]
+train$y=x.train$y
+
+# Calculate variance for each pixel for test data
+variance.test=rep(0,784)
+for (i in 1:784)
+{
+  variance.test[i]=var(x.test[,i])
+}
+variance.test=as.data.frame(variance.test)
+test=x.test[,variance.test != 0]
+test$y=x.test$y
+```
+
+#### a)
+```{r}
+# Build lasso model
+lasso.model <- model.matrix(glm(y ~ ., data = train))
+fit.lasso = glmnet(lasso.model, train$y, alpha = 1, family = 'binomial')
+
+# Plot trajectories of coefficients
+plot(fit.lasso, xvar = "lambda", lwd = 3) 
+grid(col = 3)
+```
+
+#### b)
+```{r}
+# The last ten variables
+max(which(fit.lasso$df == 10))
+c=as.matrix(fit.lasso$beta[,7])
+print(c[c!=0,])
+
+# The last nine variables
+max(which(fit.lasso$df == 9))
+c=as.matrix(fit.lasso$beta[,6])
+print(c[c!=0,])
+
+# The last eight variables
+max(which(fit.lasso$df == 8))
+c=as.matrix(fit.lasso$beta[,5])
+print(c[c!=0,])
+
+# The last seven variables
+max(which(fit.lasso$df == 7))
+c=as.matrix(fit.lasso$beta[,4])
+print(c[c!=0,])
+
+# The last six variables-- not exits
+# The last five variables
+min(which(fit.lasso$df == 5))
+c=as.matrix(fit.lasso$beta[,2])
+print(c[c!=0,])
+```
+The last ten variables are V236, V263, V264, V292, V296, V320, V348, V355, V376, V404.
+
+The final model contains five variables which are V236, V296, V348, V355, V376. The leaving order is V263, V292, V404, V320 and V264 together. 
+
+#### c)
+```{r}
+# Plot trajectories of coefficients for last ten variables
+plot(x = fit.lasso$lambda, y = fit.lasso$beta[(fit.lasso$beta[ , 7]!=0),][1,], ylim = c(0,0.005), lwd = 2, 
+     main = 'trajectories of coefficients for last ten variables', ylab = 'Coefficient', xlab = 'Lambda',
+     type = 'l', col = 20)
+
+for (i in 2:10){
+  lines(x = fit.lasso$lambda, y = fit.lasso$beta[(fit.lasso$beta[,7]!=0),][i,], col = i,lwd = 2)
+}
+
+# Add a horizontal line for coefficient=0
+abline(h = 0, col = 'orange', lwd = '3')
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

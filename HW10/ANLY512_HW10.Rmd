@@ -1,0 +1,385 @@
+---
+title: "ANLY512_HW10"
+author: "Hongyang Zheng"
+date: "2019/4/24"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r}
+library(ISLR)
+library(mlbench)
+library(dbscan)
+library(deldir)
+library(RnavGraphImageData)
+library(cluster)
+```
+
+
+# Problem #2
+#### a)
+```{r}
+dissimilarity = as.dist(matrix(c(0, 0.3, 0.4, 0.7, 
+                                 0.3, 0, 0.5, 0.8,
+                                 0.4, 0.5, 0.0, 0.45,
+                                 0.7, 0.8, 0.45, 0.0), nrow=4))
+
+# Make a plot using complete linkage
+plot(hclust(dissimilarity, method="complete"), xlab='leaf')
+```
+
+#### b)
+```{r}
+# Make a plot using single linkage
+plot(hclust(dissimilarity, method="single"), xlab='leaf')
+```
+
+#### c)
+Cluster one: 1, 2
+
+Cluster two: 3, 4
+
+#### d)
+Cluster one: 4
+
+Cluster two: 1, 2, 3
+
+#### e)
+```{r}
+plot(hclust(dissimilarity, method="complete"), labels=c(2,1,4,3), xlab='leaf')
+```
+
+Since 1, 2 are in the same cluster; 3, 4 are in the same cluster, then if we switch the label of leaves in the same cluster, the meaning of the dendrogram does not change.
+
+
+# Problem #9
+#### a)
+```{r}
+set.seed(1234)
+
+# Build cluster
+hc.cp = hclust(dist(USArrests), method="complete")
+
+# Make a plot
+plot(hc.cp)
+```
+
+#### b)
+```{r}
+# Cut the cluster
+cut.hc=cutree(hc.cp, 3)
+
+# See the results
+print(cut.hc)
+table(cut.hc)
+```
+There are 16 states belong to cluster 1, 14 states belong to cluster 2, 20 states belong to cluster 3.
+
+Cluster 1: Alabama, Alaska, Arizona, California,  Delaware, Florida, Illinois, Louisiana, Maryland, Michigan, Mississippi, Nevada, New Mexico, New York, North Carolina, South Carolina
+
+Cluster 2: Arkansas, Colorado, Georgia, Massachusetts, Missouri, New Jersey, Oklahoma, Oregon, Rhode Island, Tennessee, Texas, Virginia, Washington, Wyoming
+
+Cluster 3: Connecticut, Hawaii, Idaho, Indiana, Iowa, Kansas, Kentucky, Maine, Minnesota, Montana, Nebraska, New Hampshire, North Dakota, Ohio, Pennsylvania, South Dakota, Utah, Vermont, West Virginia, Wisconsin
+
+#### c)
+```{r}
+# Scale the data
+sd_usa = scale(USArrests)
+
+# Build a cluster
+sd.hc.cp = hclust(dist(sd_usa), method="complete")
+
+# Plot the cluster
+plot(sd.hc.cp)
+```
+
+#### d)
+```{r}
+# Cut the cluster again
+sd.cut.hc=cutree(sd.hc.cp, 3)
+
+# See the results
+print(sd.cut.hc)
+table(sd.cut.hc)
+
+# Compare
+table(sd.cut.hc, cut.hc)
+```
+From part a) and part c) graphs we can see that the max height of the dendogram is impacted by the scaling, but the bushiness is not impacted(at least looks similar). By cutting both clustering to 3 clusters we can see that the results are not same. I think for this dataset, we should scale the data before doing clustering analysis since the data measured in different units.
+
+
+# Problem Extra #67
+```{r}
+set.seed(120)
+
+# Generate data
+smiley1=mlbench.smiley(n=500, sd1 = 0.2, sd2 = 0.2)
+smiley1=as.data.frame(smiley1)
+plot(smiley1$x.x4, smiley1$x.V2, col=smiley1$classes)
+```
+#### a)
+```{r}
+# Build clusters
+try.1=kmeans(smiley1[,1:2], 4, nstart=20)
+plot(smiley1$x.x4, smiley1$x.V2, col=smiley1$classes, lwd=1)
+points(smiley1$x.x4, smiley1$x.V2, col=try.1$cluster, pch=1, cex=2, lwd = 2)
+```
+
+From the graph, we can see that the k-means cannot form four clusters recovering the four original clusters exactly, since the mouth is splited into two different clusters.
+
+```{r}
+set.seed(1234)
+# Build another clusters
+try.2=kmeans(smiley1[, 1:2], 4, nstart=20)
+
+# Make a confusion matrix
+table(smiley1$classes)
+table(try.2$cluster)
+table(smiley1$classes, try.2$cluster)
+```
+From the confusion matrix we know that there are 5 groups of points, which means the k-means clusters cannot cover the original points exactly. 
+
+#### b)
+```{r}
+# See the distribution of each class for original data
+table(smiley1$classes)
+
+# Build hierarchical clusters using complete linkage
+try.3=hclust(dist(smiley1[, 1:2]),method= "complete")
+cut.1=cutree(try.3, 4)
+table(smiley1$classes, cut.1)
+
+# Build hierarchical clusters using single linkage
+try.4=hclust(dist(smiley1[, 1:2]),method= "single")
+cut.2=cutree(try.4, 4)
+table(smiley1$classes, cut.2)
+
+# Build hierarchical clusters using average linkage
+try.5=hclust(dist(smiley1[,1:2]),method= "average")
+cut.3=cutree(try.5, 4)
+table(smiley1$classes, cut.3)
+```
+From the confusion matrices we know that when using single linkage, we can seperate the four clusters more accurately (only one point is misclassified). However when using complete linkage or average linkage, we have more points are mislabeled.
+
+
+# Problem Extra #69
+#### a)
+```{r}
+set.seed(10086)
+# Try different small sd
+for (n in seq(0.01, 0.05, 0.01))
+{
+smiley=mlbench.smiley(n=500, sd1 = n, sd2 = n)
+smiley.df=as.data.frame(smiley)
+model=kmeans(smiley.df[, 1:2], 4, nstart=20)
+print(table(smiley.df$classes))
+print(table(smiley.df$classes, model$cluster))
+}
+```
+From these five confusion matrices, we can see that most of the points are correct and the misclassified points are no more than 40. Therefore, when sd is small, we can get a good clustering.
+
+#### b)
+```{r}
+# Try different big sd
+for (n in seq(1, 1.5, 0.1))
+{
+smiley=mlbench.smiley(n=500, sd1 = n, sd2 = n)
+smiley.df=as.data.frame(smiley)
+model=kmeans(smiley.df[, 1:2], 4, nstart=20)
+print(table(smiley.df$classes))
+print(table(smiley.df$classes, model$cluster))
+}
+```
+From these confusion matrices we can see that all models have error more or less, and the error happens across multiple clusters. So when sd becomes larger, the k-means cannot over the original points very well.
+
+```{r}
+set.seed(1234)
+for (n in seq(0.5, 2, 0.5))
+{
+smiley=mlbench.smiley(n=500, sd1 = n, sd2 = n)
+smiley.df=as.data.frame(smiley)
+model=kmeans(smiley.df[, 1:2], 4, nstart=20)
+print(table(smiley.df$classes))
+print(table(smiley.df$classes, model$cluster))
+}
+```
+
+```{r}
+1-(6+4+3+8+3+45+11)/(125+209+83+83)
+1-(2+7+35+2+13+11+5+11+87)/(125+209+83+83)
+```
+
+From above, we can see that when sd=0.5, the error rate is okay, while when sd = 1, the error rate is pretty big, so the threshold should below 0.5 (assume at least the accurate rate should be 0.90).
+
+```{r}
+for (n in seq(0.3, 0.5, 0.1))
+{
+smiley=mlbench.smiley(n=500, sd1 = n, sd2 = n)
+smiley.df=as.data.frame(smiley)
+model=kmeans(smiley.df[,1:2], 4, nstart=20)
+print(table(smiley.df$classes))
+print(table(smiley.df$classes, model$cluster))
+}
+```
+
+```{r}
+1-(8+3+1+22+14+4)/(125+209+83+83)
+1-(3+2+10+31+6+1)/(125+209+83+83)
+1-(15+17+2+42+6+7)/(125+209+83+83)
+```
+
+From above, we can see the error rate is increasing when we increasing the sd, so the threshold should less than 0.3.
+
+```{r}
+for (n in seq(0.25, 0.29, 0.01))
+{
+smiley=mlbench.smiley(n=500, sd1 = n, sd2 = n)
+smiley.df=as.data.frame(smiley)
+model=kmeans(smiley.df[, 1:2], 4, nstart=20)
+print(table(smiley.df$classes))
+print(table(smiley.df$classes, model$cluster))
+}
+```
+
+```{r}
+1-(5+1+3+38+1)/(125+209+83+83)
+1-(1+1+1+11+17)/(125+209+83+83)
+1-(3+29+9+2)/(125+209+83+83)
+1-(8+1+1+28+12)/(125+209+83+83)
+```
+
+From above results, I choose to set the boundary as 0.26 since after that the accurate rate will decrease.
+
+```{r}
+# Example 1
+smiley1=mlbench.smiley(n=500, sd1 = 1.2, sd2 = 1.2)
+smiley1=as.data.frame(smiley1)
+model1=kmeans(smiley1[,1:2], 4, nstart=20)
+plot(smiley1$x.x4, smiley1$x.V2, col=smiley1$classes, lwd=1)
+points(smiley1$x.x4, smiley1$x.V2, col=model1$cluster, pch=1, cex=2, lwd = 2)
+
+# Example 2
+smiley2=mlbench.smiley(n=500, sd1 = 0.8, sd2 = 0.8)
+smiley2=as.data.frame(smiley2)
+model2=kmeans(smiley2[,1:2], 4, nstart=20)
+plot(smiley2$x.x4, smiley2$x.V2, col=smiley2$classes, lwd=1)
+points(smiley2$x.x4, smiley2$x.V2, col=model2$cluster, pch=1, cex=2, lwd = 2)
+```
+
+From the graphs we can see that when sd is larger, we can hardly recognize the smile face and can easily find mislabeled points from the graph.
+
+
+# Problem Extra #71
+#### a)
+```{r}
+set.seed(123)
+MNIST=load('~/Desktop/other/Data/mnist_all.RData')
+
+# Generate dataframe
+train.data=as.data.frame(train)
+```
+
+```{r}
+# k-means clustering
+model.1=kmeans(train.data, 2)
+table(train.data$y, model.1$cluster)
+```
+We can see that number 1, 4, 7, 9 are tend to be clustered together, because cluster1 contains a very large part of these digits, while cluster2 only contains a few. For other digits, the percentage for cluster1 and cluster2 are similar.
+
+#### b)
+```{r}
+# k-means clustering with n=10
+model.2=kmeans(train.data, 10)
+
+# Confusion matrix
+table(train.data$y)
+table(train.data$y, model.2$cluster)
+```
+We can see that this k-means clustering performs not very good. For example, for the original digit 0, there are two clusters containing more than 1000 observations, which means at least 1802 observations are wrong and we cannot classify digit 0 accurately. For digit 1, cluster 5 and 7 both contain more than 3000 observations, which menas at least half of the original digit 1 are mislabeled.
+
+#### c)
+```{r}
+# Since I cannot generate results by using the whole dataset
+# I decide to choose 10% dataset randomly for this step
+n=dim(train.data)[1]
+index=sample(n, n*0.1)
+X.1=train.data[index,]
+
+# Prepare the dataset
+X = train.data[index,2:785]
+X = as.matrix(X)
+```
+
+```{r}
+# With minPts = 30
+kNNdistplot(X,30)
+abline(h = 2100, col = 3)
+```
+
+From the plot we can see that when minPts = 30, we should use eps = 2100.
+
+```{r}
+# Build DBSCAN 
+try1=dbscan(X, eps = 2100, minPts = 30)
+```
+
+```{r}
+# Confusion matrix
+table(X.1$y)
+table(X.1$y, try1$cluster)
+```
+From dbscan clustering, I only get two clusters and most of the numbers belong to cluster 1. Obviously it is not a good cluster for a dataset that has 10 groups. 
+
+
+# Problem Extra #72
+```{r}
+# Load the data and change the names
+library(readxl)
+concrete <- read_excel("~/Desktop/other/Data/Concrete_Data.xls")
+names(concrete)=c('Cement', 'Slag', 'Fly', 'Water', 'Super', 'Coarse', 'Fine', 'Age', 'Strength')
+
+# Split the data
+n=dim(concrete)[1]
+index=sample(n, n*0.7, replace = FALSE)
+train=concrete[index,]
+test=concrete[-index,]
+```
+
+#### a)
+```{r}
+# Compute PCA
+train.0 = train[ ,-9]
+train.pca = prcomp(train.0, scale=F)
+pca = train.pca$x
+PCA1 = pca[,1]
+
+# New dataframe
+df1=data.frame(train$Strength)
+df1$pca1=PCA1
+
+# Build a linear model
+pca.model=lm(train.Strength~pca1, data=df1)
+summary(pca.model)
+```
+
+#### b)
+```{r}
+# Loading vectors for traning data
+load = train.pca$rotation
+
+# Score for test data
+test.0 = test[ , -9]
+score = as.matrix(test.0)%*%(as.matrix(load))
+score1 = score[, 1]
+
+# New dataframe
+df2=data.frame(test$Strength)
+df2$pca1=score1
+
+# Predict for test data
+pred.test = predict(pca.model, newdata=df2)
+rms = sqrt(mean((pred.test-test$Strength)^2))
+```
+
+The rms error is `r rms` on the test data.

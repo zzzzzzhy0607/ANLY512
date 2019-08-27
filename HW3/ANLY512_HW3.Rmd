@@ -1,0 +1,304 @@
+---
+title: "ANLY512_HW3"
+author: "Hongyang Zheng"
+date: "2019/2/18"
+output:
+  pdf_document: default
+  word_document: default
+  html_document: default
+---
+
+# Problem #28
+a) 
+Diagram for neural network in Problem 28
+
+![Diagram for neural network in Problem 28](~/Desktop/HW/HW3_P1.jpeg)
+b) 
+$$h_1=tanh(1.2+4.2*x_1-0.5*x_2)$$ 
+$$h_2=tanh(-30+20*x_1-40*x_2)$$
+c) 
+$$z=tanh(5-8*h_1+1.5*h_2)$$
+d) 
+$$z=tanh(5-8*tanh(1.2+4.2*x_1-0.5*x_2)+1.5*tanh(-30+20*x_1-40*x_2))$$
+
+
+# Problem #30
+From the graph, we can see that the responses(probability) from network1 and network2 are close, which means, if we set Y=1 when P>some threshold and Y=0 otherwise, the output of Y will be very similar for network1 and network2. When we use these predictions to draw ROC curve, the curve will be same.
+
+
+# Problem #34
+```{r}
+set.seed(20305)
+# Generate the dataframe
+df1=data.frame(matrix(rnorm(1100,0,1),nrow=100))
+names(df1)[11]='z'
+```
+#### a)
+```{r}
+# Fit a linear model
+model1=lm(z~., data=df1)
+summary(model1)
+
+# Function to calculate root mean squared error
+RMSE<-function(model)
+{
+  sqrt(mean(residuals(model)^2))
+}
+
+# RMSE for model1
+RMSE(model1)
+```
+The RMSE for this linear model is about 0.99, which is very high. Therefore, this linear model performs not good.
+
+#### b)
+```{r}
+library(nnet)
+# Scalar the data
+df1$z01 = (df1$z-min(df1$z))/(max(df1$z)-min(df1$z))
+
+# Fit a neural network with 2 hidden units
+model2=nnet(z01~.-z, data=df1, size=2, decay=0.01, maxit=2000)
+
+# Function to calculate RMSE
+error_rmse <- function (model)
+{
+  predict.1=predict(model, type='r')
+  predict.2=predict.1*(max(df1$z)-min(df1$z))+min(df1$z)
+
+  # Calculate RMSE for the new model
+  error1=sqrt(mean((predict.2-df1$z)**2))
+  return(error1)
+}
+
+error_rmse(model2)
+```
+This model performs better than the one in a) since the RMSE decreases from 0.99 to about 0.80
+
+#### c)
+```{r}
+# Fit a neural network with 5 hidden units
+model3=nnet(z01~.-z, data=df1, size=5, decay=0.01, maxit=2000)
+error_rmse(model3)
+
+# Fit a neural network with 10 hidden units
+model4=nnet(z01~.-z, data=df1, size=10, decay=0.01, maxit=2000)
+error_rmse(model4)
+```
+Both neural network converged and the final value for the one with 10 hidden nodes is lower than the one with 5 hidden nodes, which means the last one performs better. Compared the RMSE, we got that the last one has the lowest RMSE which is equal to about 0.30 (5 hidden nodes having rmse about 0.50). With the number of hidden nodes inceasing, the neural network performs better and better (higher accuracy) when we fit a model using the same variables.
+
+
+# Problem #33
+#### a)
+```{r}
+MNIST=load('~/Desktop/other/Data/mnist_all.RData')
+
+# Generate dataframe
+# Extract data for digit4 and digit7
+y.nist = train$y
+index <- (y.nist == 4 | y.nist == 7)
+x.nist <- train$x[index,]
+x.train <- as.data.frame(x.nist)
+
+y.nist1 = test$y
+index1 <- (y.nist1 == 4 | y.nist1 == 7)
+x.nist1 <- test$x[index1,]
+x.test <- as.data.frame(x.nist1)
+
+# y=1 if it is digit4, y=0 if it is digit7
+x.train$y <- 0
+x.train$y[y.nist[index] == 4] <- 1
+x.test$y <- 0
+x.test$y[y.nist1[index1] == 4] <- 1
+```
+
+```{r}
+# Find a variable with large variance
+# Calculate all variance for V1 to V784
+variance=rep(0,784)
+for (i in 1:784)
+{
+  variance[i]=var(x.train[,i])
+}
+variance=as.data.frame(variance)
+variance$index=seq(1:784)
+
+# Sort from biggest to smallest
+variance_sort=variance[order(variance[,1], decreasing=TRUE),]
+
+# Print the top 10 largest variance index
+print(variance_sort[1:20,2])
+```
+
+```{r}
+# Calculate correlation for some random combination
+cor(x.train$V241, x.train$V266)
+cor(x.train$V267, x.train$V373)
+cor(x.train$V602, x.train$V268)
+cor(x.train$V602, x.train$V373)
+cor(x.train$V574, x.train$V374)
+cor(x.train$V574, x.train$V269)
+cor(x.train$V584, x.train$V364)
+
+# Find that V584 and V364 have a very low correlation -0.0005790498
+library("pROC")
+fit1=glm(y~V584+V364, data=x.train, family = 'binomial')
+# AUC score
+pred.fit1=predict(fit1, data=x.train, type = 'response')
+auc(roc(x.train$y, pred.fit1), col=4)
+```
+
+#### b)
+```{r}
+# Using neural network
+fit2=nnet(y~V584+V364, data=x.train, size=1, decay=0.01, maxit=2000)
+# AUC score
+pred.fit2=as.vector(predict(fit2, data=x.train, type = "raw"))
+auc(roc(x.train$y, pred.fit2), col=4)
+```
+The AUC score is same for the two models, because when we use neural network, if we set the number of hidden units equal to 1, then it is same as the logistic model. Therefore, the AUC score is the same.
+
+#### c)
+```{r}
+# Using neural network with 3 hidden units
+fit3=nnet(y~V584+V364, data=x.train, size=3, decay=0.01, maxit=2000)
+pred.fit3=as.vector(predict(fit3, data=x.train, type = "raw"))
+auc(roc(x.train$y, pred.fit3), col=4)
+
+# Using neural network with 5 hidden units
+fit4=nnet(y~V584+V364, data=x.train, size=5, decay=0.01, maxit=2000)
+pred.fit4=as.vector(predict(fit4, data=x.train, type = "raw"))
+auc(roc(x.train$y, pred.fit4), col=4)
+
+# Using neural network with 10 hidden units
+fit5=nnet(y~V584+V364, data=x.train, size=8, decay=0.01, maxit=2000)
+pred.fit5=as.vector(predict(fit5, data=x.train, type = "raw"))
+auc(roc(x.train$y, pred.fit5), col=4)
+```
+The AUC score goes up and fixes at the same score. The model with 5 or 10 hidden units performs better.
+
+#### d)
+```{r}
+# Using test data for 3 hidden units
+fit3=nnet(y~V584+V364, data=x.train, size=3, decay=0.01, maxit=2000)
+pred.fit3.test=as.vector(predict(fit3, newdata=x.test, type = "raw"))
+auc(x.test$y, pred.fit3.test)
+
+# Using test data for 5 hidden units
+fit4=nnet(y~V584+V364, data=x.train, size=5, decay=0.01, maxit=2000)
+pred.fit4.test=as.vector(predict(fit4, newdata=x.test, type = "raw"))
+auc(x.test$y, pred.fit4.test)
+
+# Using test data for 10 hidden units
+fit5=nnet(y~V584+V364, data=x.train, size=10, decay=0.01, maxit=2000)
+pred.fit5.test=as.vector(predict(fit5, newdata=x.test, type = "raw"))
+auc(x.test$y, pred.fit5.test)
+```
+The AUC score for the test data does not increase when I add more units into the hidden layer. Compared with increased AUC score for training data (although the change is very small), I think the model is overfitting. The performance of model does not increase with more hidden nodes.
+
+
+# Problem #36
+```{r}
+# Generate dataset
+x = rnorm(50, 0 ,2) 
+y<-rep(1, length(x)) 
+y[abs(x) < 1] = 0
+plot(x,rep(0,length(x)),col=y+1)
+```
+
+#### a)
+```{r}
+# Fit a logistic model
+log.model=glm(y~x, family='binomial')
+pred.log.model=predict(log.model, type = 'r')
+auc(roc(y, pred.log.model), col=4)
+```
+The auc score for this logistic model is about 0.52, which is a low score. Therefore, the performance of this model is not good.
+
+#### b)
+```{r}
+# New feature
+x2=(x)^2
+# Plot for x and x2
+plot(x2, x, col=y+1)
+
+# Fit a new logistic model
+log.model.new=glm(y~x+x2, family = 'binomial')
+pred.log.new=predict(log.model.new, type='r')
+auc(roc(y, pred.log.new), col=4)
+```
+The auc curve for this new regression model is 1, which is a perfect score. This new model performs very good.
+
+#### c)
+```{r}
+# Fit a nnet model
+nnet.model=nnet(y~x, size=2, decay=0.01, maxit=2000)
+pred.nnet=as.vector(predict(nnet.model, type = 'r'))
+auc(roc(y, pred.nnet), col=4)
+```
+The auc score for this nnet model is 1, which is a perfect score.
+
+#### d)
+As the graph shows below, when we add two nodes in the hidden layer, we will have three values(including a bias) as input to calculate the final output. If we use a logistic model, we only have two input values which are x and the bias to calculate the final output. Therefore, by this method, we increase the number of features used to build the model and increase the dimension of the space. 
+
+![Diagram for Problem 36](~/Desktop/HW/HW3_P2.jpeg)
+
+
+# Problem #37
+#### a)
+```{r}
+# Load the data and change the names
+library(readxl)
+Concrete_Data <- read_excel("~/Desktop/HW/Concrete_Data.xls")
+names(Concrete_Data)=c('Cement', 'Slag', 'Fly', 'Water', 'Super', 'Coarse', 'Fine', 'Age', 'Strength')
+# Add one column for regularization of Strength
+Concrete_Data$Strength01 = (Concrete_Data$Strength-min(Concrete_Data$Strength))/(max(Concrete_Data$Strength)-min(Concrete_Data$Strength))
+
+# Train set and test set
+n=nrow(Concrete_Data)
+index=sample(n, n*0.7, replace = FALSE)
+train=Concrete_Data[index, ]
+test=Concrete_Data[-index, ]
+```
+
+#### b)
+```{r}
+# Vector to store RMSE
+RMSE.train=rep(NA, 19)
+# Calculate RMSE for different number of nodes
+for (a in seq(2,20))
+{
+  model=nnet(Strength01~.-Strength, data=train, size=a, decay=0.01, maxit=2000)
+  train.predict.1 <- predict(model)
+  train.predict = train.predict.1*(max(Concrete_Data$Strength)-min(Concrete_Data$Strength))+min(Concrete_Data$Strength)
+  RMSE.train[a-1] <- sqrt(mean((train.predict - train$Strength)^2))
+}
+
+# Make a plot
+plot(seq(2,20), RMSE.train, xlab='Number of Node', ylab='RMSE')
+```
+
+#### c)
+```{r}
+# Vector to store RMSE
+RMSE.test=rep(NA, 19)
+# Calculate RMSE for different number of nodes
+for (a in seq(2,20))
+{
+  model=nnet(Strength01~.-Strength, data=train, size=a, decay=0.01, maxit=2000)
+  test.predict.1 <- predict(model, newdata = test)
+  test.predict = test.predict.1*(max(Concrete_Data$Strength)-min(Concrete_Data$Strength))+min(Concrete_Data$Strength)
+  RMSE.test[a-1] <- sqrt(mean((test.predict - test$Strength)^2))
+}
+```
+
+```{r}
+# Make a plot
+plot(2:20, RMSE.train, xlab='Number of Node', ylab='RMSE',col='red')
+points(2:20, RMSE.test, col='green')
+```
+
+#### d)
+I think there is no obvious overfitting. We can tell that the difference between the RMSE for training data and the RMSE for test data is not very big on average, and there is no tendency that the test RMSE increases from certain low point, it just goes up and down.  
+
+
+

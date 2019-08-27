@@ -1,0 +1,319 @@
+---
+title: "ANLY512_HW1"
+author: "Hongyang Zheng"
+date: "2019/2/4"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+# Problem Ch.3 #3
+The model is $\hat{salary}=50+20X_1+0.07X_2+35X_3+0.01X4-10X5$
+
+#### a)
+iii is correct.
+
+For female the model can be written as:
+$$\hat{salary_{female}}=50+20*GPA+0.07*IQ+35+0.01*GPA*IQ-10*GPA$$
+$$\hat{salary_{female}}=85+10*GPA+0.01*IQ*GPA+0.07*IQ$$
+For male the model can be written as:
+$$\hat{salary_{male}}=50+20*GPA+0.07*IQ+0.01*GPA*IQ$$
+$$\hat{salary_{male}}=50+20*GPA+0.01*IQ*GPA+0.07*IQ$$
+For a fixed value of IQ and GPA, if GPA is high enough such that $10*GPA > 35$, then males earn more on average than females. Therefore, iii is the correct answer.
+
+#### b)
+When IQ=110 and GPA=4.0, $\hat{salary_{female}}=85+10*4.0+0.01*110*4.0+0.07*110=85+40+4.4+7.7=137.1$
+
+Therefore, the salary is 137.1*1000=137100 dollars
+
+#### c)
+The statement is false. Although the coefficient for the interactive term is small, if the p-value for this term is very small, then the interactive term is statistically significant.
+
+
+# Problem Ch.3 #8
+#### a)
+```{r}
+# Load data
+library(ISLR)
+summary(Auto)
+
+# Fit model
+lm.fit1=lm(mpg~horsepower, data=Auto)
+summary(lm.fit1)
+```
+#### i.
+Yes, there is a relationship between the predictor and the response, since the p-value for F-test is near  0. There is a strong evidence that the relationship between mpg and horsepower is statistically significant.
+
+#### ii.
+The R-squared is 0.6059, which means the predictor can explain about 60% of the variance in mpg, therefore, the relationship is strong.
+
+#### iii.
+Since the coefficient for horsepower is -0.157845, the relationship is negative.
+
+#### iv.
+```{r}
+# Predicted mpg with horsepower of 98
+mpg=39.935861+-0.157845*98
+
+# Confidence and Prediction interval
+predict(lm.fit1, data.frame(horsepower=c(98)), interval="confidence")
+predict(lm.fit1, data.frame(horsepower=c(98)), interval="prediction")
+```
+The predicted value is `r mpg`; the confidence interval is $[23.97308, 24.96108]$ and the prediction interval is $[14.8094, 34.12476]$
+
+#### b)
+```{r}
+plot(Auto$mpg~Auto$horsepower)
+abline(lm.fit1)
+```
+
+#### c)
+```{r}
+par(mfrow=c(2,2))
+plot(lm.fit1)
+```
+From the first plot we can see that there is a non-linear relationship between the predictor and the response, since the points are not symmetric about the red line.
+
+From the third plot we can see that the variance of residuals is not constant, since the points do not spread equally.
+
+From the last plot we can see that some points have a standard residuals greater than 3, therefore, there are some outliers.
+
+
+# Problem Ch.3 #10abc
+#### a)
+```{r}
+lm.fit2=lm(Sales~Price+Urban+US, data=Carseats)
+summary(lm.fit2)
+```
+
+#### b)
+For price:
+
+There is a relationship between Price and Sales since the p-value for Price is very small.
+
+When a store is in an urban location of the US, if the price that company charges for car seats increases 1 unit, then the unit sales will decrease 54.459 units on average.
+
+For Urban:
+There is no relationship between Urban and Sales since the p-value for Urban is very big.
+
+For US:
+There is a relationship between US and Sales since the p-value for US is very small.
+
+When a store is in an urban location and have a fixed price, the company in the US will sale 1200.573 more units than the company not in the US on average.
+
+#### c)
+$$\hat {Sales} = 13.04 -0.05 Price-0.02 UrbanYes + 1.20 USYes$$
+UrbanYes=1 when the company is in an urban location.
+
+USYes=1 when the company is in the US.
+
+
+# Problem Ch.3 #15ab
+#### a)
+```{r}
+library(MASS)
+summary(Boston)
+
+lm.model1=lm(crim~zn,data=Boston)
+summary(lm.model1)
+```
+```{r}
+lm.model2=lm(crim~indus,data=Boston)
+summary(lm.model2)
+```
+
+```{r}
+lm.model3=lm(crim~chas,data=Boston)
+summary(lm.model3)
+```
+
+```{r}
+lm.model4=lm(crim~nox,data=Boston)
+summary(lm.model4)
+```
+
+```{r}
+lm.model5=lm(crim~rm,data=Boston)
+summary(lm.model5)
+```
+
+```{r}
+lm.model6=lm(crim~age,data=Boston)
+summary(lm.model6)
+```
+
+```{r}
+lm.model7=lm(crim~dis,data=Boston)
+summary(lm.model7)
+```
+
+```{r}
+lm.model8=lm(crim~rad,data=Boston)
+summary(lm.model8)
+```
+
+```{r}
+lm.model9=lm(crim~tax,data=Boston)
+summary(lm.model9)
+```
+
+```{r}
+lm.model10=lm(crim~ptratio,data=Boston)
+summary(lm.model10)
+```
+
+```{r}
+lm.model11=lm(crim~black,data=Boston)
+summary(lm.model11)
+```
+
+```{r}
+lm.model12=lm(crim~lstat,data=Boston)
+summary(lm.model12)
+```
+
+```{r}
+lm.model13=lm(crim~medv,data=Boston)
+summary(lm.model13)
+```
+
+All predictors except 'chas' have a statistically significant coefficient.
+
+```{r}
+plot(Boston$chas, Boston$crim)
+abline(lm.model3)
+par(mfrow=c(2,2))
+plot(lm.model3)
+```
+
+#### b)
+```{r}
+lm.model=lm(crim~.,data=Boston)
+summary(lm.model)
+```
+There is a relationship between predictors and response since the p-value for F-test is near 0. The R-squared is 0.454, which is okay. For predictors: zn, nox, dis, rad, black, lstat and medv, we can reject the null hypothesis that $\beta_j =0$, since the p-value for those coefficients is smaller than 0.10. 
+
+
+# Problem Xtra #10
+```{r}
+# Fit the model
+lm.cars=lm(dist~speed, data=cars)
+
+# Influence.lm
+influence.cars=influence(lm.cars)
+
+# The hat contains the value of the diagonal of the ‘hat’ matrix, which is the leverage
+leverage.cars=sort(influence.cars$hat, decreasing=TRUE)
+leverage.cars
+# The first three observations
+leverage.cars[1:3]
+
+# Calculate standardized residuals
+sresiduals.cars=sort(abs(influence.cars$wt.res/influence.cars$sigma), decreasing=TRUE)
+sresiduals.cars
+# The first three observations
+sresiduals.cars[1:3]
+```
+The three observations with largest standardized residuals are 49, 23, 35, and their corresponding leverage are 0.07398540, 0.02143066, 0.02493431.
+
+The three observations with largest leverage are 1, 2, 50, and their corresponding standardized residuals (in magnitude) are 0.24785853, 0.76778134, 0.27490293.
+
+
+# Problem Xtra #14
+#### a)
+```{r}
+set.seed(134)
+
+# Generate X
+X1=rep(NA,100)
+X1[1]=rnorm(1)
+for (i in 2:100)
+{
+  X1[i]=1-0.5*X1[i-1]+rnorm(1,0,0.2)
+}
+
+# Plot X as a vector
+plot(X1)
+
+# Plot as timeseries object
+X1.ts=as.ts(X1)
+plot(X1.ts)
+```
+
+From the first plot we can see that the data points spread equally over time. From the second plot, we can see that X has fluctuation over time.
+
+#### b)
+```{r}
+# Generate X
+X2=rep(NA,100)
+X2[1]=rnorm(1)
+for (i in 2:100)
+{
+  X2[i]=1+0.5*X2[i-1]+rnorm(1,0,0.2)
+}
+
+# Plot X as a vector
+plot(X2)
+
+# Plot as timeseries object
+X2.ts=as.ts(X2)
+plot(X2.ts)
+```
+
+From the first plot we can see that the data points spread much wider than a) over time. From the second plot, we can see that X has bigger fluctuation over time.
+
+#### c)
+```{r}
+# Generate X
+X3=rep(NA,100)
+X3[1]=rnorm(1)
+for (i in 2:100)
+{
+  X3[i]=1-0.9*X3[i-1]+rnorm(1,0,0.2)
+}
+
+# Plot X as a vector
+plot(X3)
+
+# Plot as timeseries object
+X3.ts=as.ts(X3)
+plot(X3.ts)
+```
+
+From the first plot we can see that the data points spread much wider than b) over time. From the second plot, we can see that X has bigger fluctuation over time and for a given period of time, the number of fluctuations that happend during that time increases.
+
+
+# Problem Xtra #15
+#### a)
+```{r}
+set.seed(134)
+
+# Generate X
+X=rep(NA,100)
+X[1]=rnorm(1)
+for (i in 2:100)
+{
+  X[i]=1-0.5*X[i-1]+rnorm(1,0,0.2)
+}
+
+# plot
+plot(X[1:99], X[2:100])
+```
+
+It seems that there is a negative relationship between $X_{t-1}$ and $X_t$.
+
+#### b)
+```{r}
+# Data Frame
+time.data=data.frame(Xt_1=X[1:99],X=X[2:100])
+
+# Fit a model
+time.model=lm(X~Xt_1,data=time.data)
+summary(time.model)
+```
+
+$\hat{\beta_i}$ is $-0.46045$, which is close to the real $\beta_i=-0.5$. The residual standard error is 0.2261, which is close to the real standard error 0.2.
+
+The model we bulid is $X_t=0.95359-0.46045*X_{t-1}$. There is a negative relationship between $X_t$ and $X_{t-1}$, so when the previous observation changes one unit, $X_t$ will decrease about 0.46 units.
+

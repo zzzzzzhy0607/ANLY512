@@ -1,0 +1,483 @@
+---
+title: "ANLY512_HW9"
+author: "Hongyang Zheng"
+date: "2019/4/15"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+
+```{r}
+library(ISLR)
+library(e1071)
+library(mlbench)
+library("pROC")
+library(randomForest)
+```
+
+
+# Problem #3
+#### a)
+```{r}
+x1 = c(3, 2, 4, 1, 2, 4, 4)
+x2 = c(4, 2, 4, 4, 1, 3, 1)
+colors = c("red", "red", "red", "red", "blue", "blue", "blue")
+plot(x1, x2, col = colors, xlim = c(0, 5), ylim = c(0, 5))
+```
+
+#### b)
+The optimal separating hyperplane must between the points (2,2), (4,4), (2,1), (4,3). 
+
+The average of the two sets points is (2,1.5), (4,3.5).
+
+slope=(3.5-1.5)/(4-2)=1
+
+intercept=1.5-2=-0.5
+
+The hyperplane is 0.5-X1+X2=0
+
+```{r}
+plot(x1, x2, col = colors, xlim = c(0, 5), ylim = c(0, 5))
+abline(-0.5, 1)
+```
+
+#### c)
+Classify to red if 0.5-X1+X2>0, and classify to blue otherwise.
+
+#### d)
+```{r}
+plot(x1, x2, col = colors, xlim = c(0, 5), ylim = c(0, 5))
+abline(-0.5, 1)
+abline(-1, 1, lty = 2)
+abline(0, 1, lty = 2)
+```
+
+#### e)
+```{r}
+plot(x1, x2, col = colors, xlim = c(0, 5), ylim = c(0, 5))
+abline(-0.5, 1)
+arrows(2, 1, 2, 1.5)
+arrows(2, 2, 2, 1.5)
+arrows(4, 4, 4, 3.5)
+arrows(4, 3, 4, 3.5)
+```
+
+#### f)
+A slight movement of observation #7 (not a support vector) (4,1) blue would not have an effect on the maximal margin hyperplane since its movement would be outside of the margin.
+
+#### g)
+```{r}
+plot(x1, x2, col = colors, xlim = c(0, 5), ylim = c(0, 5))
+abline(0.1, 0.8)
+```
+-0.1-0.8X1+X2>0
+
+#### h)
+```{r}
+plot(x1, x2, col = colors, xlim = c(0, 5), ylim = c(0, 5))
+points(c(4), c(2), col = c("red"))
+```
+
+
+# Problem #7
+#### a)
+```{r}
+gas.med = median(Auto$mpg)
+new.var = ifelse(Auto$mpg > gas.med, 1, 0)
+Auto$mpglevel = as.factor(new.var)
+```
+
+#### b)
+```{r}
+set.seed(1234)
+# Build svm with linear kernel with different cost
+fit.linear = tune(svm, mpglevel ~ ., data = Auto, kernel = "linear", 
+                  ranges = list(cost = c(0.01, 0.1, 1, 5, 10, 20, 50, 100)))
+summary(fit.linear)
+```
+The lowest cross-validation error is gained when cost = 1 or 5, and the optimal cost is 1. With the cost increasing, the cross-validation error first decreases and then increases.
+
+#### c)
+```{r}
+# Build svm with poly kernel with different cost and degree
+fit.poly = tune(svm, mpglevel ~ ., data = Auto, kernel = "polynomial", 
+                ranges = list(cost = c(0.1, 1, 5, 10), degree = c(2, 3, 4, 5)))
+summary(fit.poly)
+```
+The lowest cross-validation error is gained when cost = 10 and degree = 2. With degree = 2 increasing cost leads to the cross-validation error decrease; while when degree= 3, 4, 5, increasing cost does not have an obvious impact on decreasing the error.
+
+```{r}
+# Build svm with radial kernel with different cost and gamma
+fit.radial = tune(svm, mpglevel ~ ., data = Auto, kernel = "radial", 
+                  ranges = list(cost = c(0.1, 1, 5, 10), gamma = c(0.01, 0.1, 1, 5, 10)))
+summary(fit.radial)
+```
+The lowest cross-validation error is gained when cost = 10 and gamma = 0.1. With gamma fixed, increasing cost leads to the cross-validation error decrease.
+
+#### d)
+```{r}
+# Use the best parameters to build the models
+svm.linear = svm(mpglevel ~ ., data = Auto, kernel = "linear", cost = 1)
+svm.poly = svm(mpglevel ~ ., data = Auto, kernel = "polynomial", cost = 10, degree = 2)
+svm.radial = svm(mpglevel ~ ., data = Auto, kernel = "radial", cost = 10, gamma = 0.1)
+
+# Make plot for linear kernel 
+# random select 4 variables
+plot(svm.linear, Auto, mpg~cylinders)
+plot(svm.linear, Auto, mpg~displacement)
+plot(svm.linear, Auto, mpg~horsepower)
+plot(svm.linear, Auto, mpg~weight)
+```
+
+We can see that this model overall does a good job for separating two classes (two colors).
+
+```{r}
+# Make plot for poly kernel 
+# random select 4 variables
+plot(svm.poly, Auto, mpg~cylinders)
+plot(svm.poly, Auto, mpg~displacement)
+plot(svm.poly, Auto, mpg~horsepower)
+plot(svm.poly, Auto, mpg~weight)
+```
+
+This model with poly kernel does not perform good compared to linear kernel. The error for poly kernel is also much higher than the error for linear kernel.
+
+```{r}
+# Make plot for radial kernel 
+# random select 4 variables
+plot(svm.radial, Auto, mpg~cylinders)
+plot(svm.radial, Auto, mpg~displacement)
+plot(svm.radial, Auto, mpg~horsepower)
+plot(svm.radial, Auto, mpg~weight)
+```
+
+This model with radial kernel does not perform good compared to linear kernel, but is similar to poly kernal. The error for radial kernel is also much higher than the error for linear kernel.
+
+
+# Problem #8
+#### a)
+```{r}
+set.seed(2345)
+
+# Split the data into train and test
+train = sample(dim(OJ)[1], 800)
+OJ.train = OJ[train, ]
+OJ.test = OJ[-train, ]
+```
+
+#### b)
+```{r}
+fit.cost.0.01=svm(Purchase ~ ., data = OJ.train, kernel = "linear", cost = 0.01)
+summary(fit.cost.0.01)
+```
+There are 449 support vectors out of 800 observations, and 223 vectors belong to CH, and 226 vectors belong to MM. 
+
+#### c)
+```{r}
+# Training error
+train.pred.1 = predict(fit.cost.0.01, OJ.train)
+table(OJ.train$Purchase, train.pred.1)
+train.error.1 = (85+57)/800
+```
+The training error is `r train.error.1`.
+
+```{r}
+# Test error
+test.pred.1 = predict(fit.cost.0.01, OJ.test)
+table(OJ.test$Purchase, test.pred.1)
+test.error.1 = (19+15)/270
+```
+The test error is `r test.error.1`.
+
+#### d)
+```{r}
+tune.out = tune(svm, Purchase ~ ., data = OJ.train, kernel = "linear", 
+                ranges = list(cost = 10^seq(-2, 1, by = 0.1)))
+summary(tune.out)
+```
+The optimal cost is 7.943282
+
+#### e)
+```{r}
+# Build a new model using the optimal cost
+fit.new.cost = svm(Purchase ~ ., kernel = "linear", data = OJ.train, cost = 7.943282)
+
+# Training error
+train.pred.2 = predict(fit.new.cost, OJ.train)
+table(OJ.train$Purchase, train.pred.2)
+train.error.2 = (81+63)/800
+
+# Test error
+test.pred.2 = predict(fit.new.cost, OJ.test)
+table(OJ.test$Purchase, test.pred.2)
+test.error.2 = (16+17)/270
+```
+With the new cost, the training error increases from 0.1775 to 0.18, while the test error decreases slightly from 0.1259 to 0.12222. 
+
+#### f)
+```{r}
+# Using a radial kernel with cost = 0.01 and gamma = default
+fit.radial=svm(Purchase ~ ., data = OJ.train, kernel = "radial", cost = 0.01)
+summary(fit.radial)
+
+# Training error
+train.radial = predict(fit.radial, OJ.train)
+table(OJ.train$Purchase, train.radial)
+train.error.r = (313)/800
+
+# Test error
+test.radial = predict(fit.radial, OJ.test)
+table(OJ.test$Purchase, test.radial)
+test.error.r = (104)/270
+```
+In this situation, the error for both training data and test data are high. All observations are classified as CH. 
+
+```{r}
+# Find the optimal cost
+tune.out.r = tune(svm, Purchase ~ ., data = OJ.train, kernel = "radial", 
+                ranges = list(cost = 10^seq(-2, 1, by = 0.1)))
+summary(tune.out.r)
+
+# Build a new model using the optimal cost
+fit.new.cost.2 = svm(Purchase ~ ., kernel = "radial", data = OJ.train, 
+                     cost = tune.out.r$best.parameters$cost)
+
+# Training error
+train.radial.2 = predict(fit.new.cost.2, OJ.train)
+table(OJ.train$Purchase, train.radial.2)
+train.error.r2 = (82+43)/800
+
+# Test error
+test.radial.2 = predict(fit.new.cost.2, OJ.test)
+table(OJ.test$Purchase, test.radial.2)
+test.error.r2 = (22+13)/270
+```
+The optimal cost is 1, and the train error is `r train.error.r2`,  which is lower than using the linear kernel. The test error is `r test.error.r2`, which is a little higher than using the linear kernel.
+
+#### g)
+```{r}
+# Using a polynomial kernel with cost = 0.01, degree = 2
+fit.poly=svm(Purchase ~ ., data = OJ.train, kernel = "poly", cost = 0.01, degree=2)
+summary(fit.poly)
+
+# Training error
+train.poly = predict(fit.poly, OJ.train)
+table(OJ.train$Purchase, train.poly)
+train.error.p = (296+3)/800
+
+# Test error
+test.poly = predict(fit.poly, OJ.test)
+table(OJ.test$Purchase, test.poly)
+test.error.p = (95+4)/270
+```
+In this situation, the error for training and test is also very high.
+
+```{r}
+tune.out.p = tune(svm, Purchase ~ ., data = OJ.train, kernel = "poly", 
+                ranges = list(cost = 10^seq(-2, 1, by = 0.1)), degree=2)
+summary(tune.out.p)
+
+# Build a new model using the optimal cost
+fit.new.cost.3 = svm(Purchase ~ ., kernel = "poly", data = OJ.train, 
+                     cost = tune.out.p$best.parameters$cost)
+
+# Training error
+train.poly.2 = predict(fit.new.cost.3, OJ.train)
+table(OJ.train$Purchase, train.poly.2)
+train.error.p2 = (85+35)/800
+
+# Test error
+test.poly.2 = predict(fit.new.cost.3, OJ.test)
+table(OJ.test$Purchase, test.poly.2)
+test.error.p2 = (26+15)/270
+```
+The optimal cost is 7.943282, and the train error is `r train.error.p2`,  which is lower than using the linear kernel and radial kernel. The test error is `r test.error.p2`, which is much higher than using the linear kernel.
+
+#### h)
+Overall, polynomial basis kernel seems to be producing minimum misclassification error on train data, while linear basis kernel seems to be producing minimum misclassification error on test data. Therefore, I think the linear basis kernel still gives the best result, since it has the minimum test error.
+
+
+# Extra 63
+#### a)
+```{r}
+set.seed(1234)
+data(BreastCancer)
+
+# Drop NA rows
+sum(is.na(BreastCancer))
+new.bc=na.omit(BreastCancer)
+
+# Convert response variable into a factor variable of 1s and 0s
+new.bc$Class <- ifelse(new.bc$Class == "malignant", 1, 0)
+new.bc$Class <- factor(new.bc$Class, levels = c(0, 1))
+
+# Remove id column
+new.bc <- new.bc[,-1]
+
+# Convert predictors to numeric
+for(i in 1:9) {
+ new.bc[, i] <- as.numeric(as.character(new.bc[, i]))
+}
+
+# Fit a logistic model
+fit.log=glm(Class~., data=new.bc, family='binomial')
+```
+```{r}
+# Plot the ROC curve
+pred.log <- predict(fit.log, data=new.bc, type = "response")
+plot(roc(new.bc$Class, pred.log))
+grid(col = 2)
+
+# AUC score
+auc(roc(new.bc$Class, pred.log))
+```
+The auc score for this logistic model is 0.9963.
+
+#### b)
+```{r}
+# Use a support vector classifier (linear kernels) to classify
+fit.linear=svm(Class~., kernel='linear', data=new.bc)
+pred.linear=as.numeric(predict(fit.linear, data=new.bc))-1
+
+# Plot ROC
+plot(roc(new.bc$Class, pred.log), col=2)
+lines(roc(new.bc$Class, pred.linear), col=3)
+
+# Calculate auc score
+auc(roc(new.bc$Class, pred.linear))
+```
+The auc score for this svm model with linear kernel is 0.9718.
+
+#### c)
+```{r}
+# Use SVMs with polynomial kernels degree = 2, 3, 4, 5 with cost fixed.
+fit.poly2=svm(Class~., kernel='poly', data=new.bc, cost=10, degree=2)
+fit.poly3=svm(Class~., kernel='poly', data=new.bc, cost=10, degree=3)
+fit.poly4=svm(Class~., kernel='poly', data=new.bc, cost=10, degree=4)
+fit.poly5=svm(Class~., kernel='poly', data=new.bc, cost=10, degree=5)
+
+pred.poly.2 <- as.numeric(predict(fit.poly2)) - 1
+pred.poly.3 <- as.numeric(predict(fit.poly3)) - 1
+pred.poly.4 <- as.numeric(predict(fit.poly4)) - 1
+pred.poly.5 <- as.numeric(predict(fit.poly5)) - 1
+
+# Plot ROC curve for all models
+plot(roc(new.bc$Class, pred.log), col=2)
+lines(roc(new.bc$Class, pred.linear), col=3)
+lines(roc(new.bc$Class, pred.poly.2), col=4)
+lines(roc(new.bc$Class, pred.poly.3), col=5)
+lines(roc(new.bc$Class, pred.poly.4), col=6)
+lines(roc(new.bc$Class, pred.poly.5), col=7)
+
+# Calculate auc score
+auc(roc(new.bc$Class, pred.poly.2))
+auc(roc(new.bc$Class, pred.poly.3))
+auc(roc(new.bc$Class, pred.poly.4))
+auc(roc(new.bc$Class, pred.poly.5))
+legend("bottomright", c('Logistic model', 'SVM linear', 'SVM poly with degree=2', 
+                     'SVM poly with degree=3', 'SVM poly with degree=4', 'SVM poly with degree=5'), 
+       col = c(2,3,4,5,6, 7), cex = 1, lty = 1)
+```
+
+#### d)
+Logistic regression model is better since the auc score is near 1. With cost=10 and degree = 3, the auc score is about 0.981 for poly svm which is still not better than Logistic regression model. This appears not to depend on degree since the auc score increases first and then decreases.
+
+
+# Extra 66
+```{r}
+set.seed(123)
+MNIST=load('~/Desktop/other/Data/mnist_all.RData')
+
+# Generate dataframe
+# Extract data for digit3 and digit8
+index.train = (train$y ==3|train$y == 8)
+train.df = as.data.frame(train$x[index.train,])
+train.df$y=0
+train.df$y[train$y[index.train]==8]=1
+train.df$y = as.factor(train.df$y)
+
+# Remove all variables with zero vaiance
+var.train = apply(train.df,2,var)
+train.df = train.df[,var.train>0]
+
+# Distinguish from 3 and 8
+index.test = (test$y ==3|test$y == 8)
+test.df = as.data.frame(test$x[index.test,])
+test.df$y=0
+test.df$y[test$y[index.test]==8]=1
+test.df$y = as.factor(test.df$y)
+
+# Remove all variables with zero vaiance
+test.df = test.df[,var.train>0]
+```
+
+#### a)
+```{r}
+# Random Forest
+error_rate.rf = rep(NA,5)
+
+for (i in 1:5){
+  rf =randomForest(y~.,train.df,ntree = i*10) 
+  pred = predict(rf,train.df,type = 'class')
+  tb = table(pred,train.df$y)
+  error_rate.rf[i] = (tb[2]+tb[3])/length(train.df$y)
+}
+error_rate.rf
+```
+The smallest error is about 0, when ntree = 20. 
+
+```{r}
+rf.best = randomForest(y~.,train.df,ntree = 30)
+pred.test = predict(rf.best,test.df,type = 'class')
+tb = table(pred.test,test.df$y)
+error.best.rf = (tb[2]+tb[3])/length(test.df$y)
+print(error.best.rf)
+```
+The test error is about 0.015625.
+
+#### b)
+```{r}
+# Write a function to calculate error
+error_rate <- function(model, df)
+{
+  pred = predict(model, data=df)
+  misclass = sum(df$y != pred)
+  error_rate = misclass/length(pred)
+  return(error_rate)
+}
+
+# When cost = 20
+svm.20 = svm(y ~ ., kernel = "radial", data = train.df, cost = 20)
+error.20 = error_rate(svm.20, train.df)
+
+# When cost = 10
+svm.10 = svm(y ~ ., kernel = "radial", data = train.df, cost = 10)
+error.10 = error_rate(svm.10, train.df)
+
+# When cost = 1
+svm.1 = svm(y ~ ., kernel = "radial", data = train.df, cost = 1)
+error.1 = error_rate(svm.1, train.df)
+
+# When cost = 0.1
+svm.0.1 = svm(y ~ ., kernel = "radial", data = train.df, cost = 0.1)
+error.0.1 = error_rate(svm.0.1, train.df)
+```
+
+```{r}
+# Test data
+pred.best.svm = predict(svm.20, newdata=test.df)
+tb = table(pred.best.svm,test.df$y)
+error.best.svm = (tb[2]+tb[3])/length(test.df$y)
+print(error.best.svm)
+```
+The smallest error is 0 which is gained when cost = 20, and the test error is 0. 
+
+#### c)
+The best train error for random forest is 0 when ntree=20, and the test error is 0.015625. So it may be overfitting.
+
+The best train error for svm is 0 when cost = 20 and the test error is 0.013. So it may be overfitting. 
+
+Therefore, the svm test error is smaller than that for random forest, so svm is better.
+
+Yes, the runtime is differ substantially: svm runs slower than the random forest, and when ntree or cost is greater, the runtime is longer.
